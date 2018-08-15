@@ -113,11 +113,11 @@ print('shapes:', X_val.shape, y_val.shape)
 
 ndim = X_train.shape[1]
 # layers = [64,32]
-layers = [256,128,128,128]
+layers = [256,128,128]
 
 learning_rate_decay = .97
 start_learning_rate = 8e-4
-learning_rate_schedule_epochs = 25000
+learning_rate_schedule_epochs = 50000
 
 # TODO: add weight stddev and stuff
 
@@ -161,14 +161,18 @@ l2_regularizer = sum(tf.nn.l2_loss(Wxxx) for Wxxx in Ws)
 mse_e = tf.losses.mean_squared_error(predictions = y, labels = y_)
 loss = mse_e + l2_reg_*l2_regularizer
 
-train_step = tf.train.AdamOptimizer(learning_rate=learning_rate_).minimize(loss)
+#train_step = tf.train.AdamOptimizer(learning_rate=learning_rate_).minimize(loss)
 
 global_step = tf.Variable(0, trainable=False)
 starter_learning_rate = start_learning_rate
 learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                            learning_rate_schedule_epochs, learning_rate_decay, staircase=True)
 
-train_step = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss, global_step=global_step)
+lr_fun = lambda: learning_rate
+min_lr = lambda: tf.constant(1e-5)
+actual_lr = tf.case([(tf.less(learning_rate, tf.constant(1e-5)), min_lr)], default=lr_fun)
+
+train_step = tf.train.AdamOptimizer(learning_rate=actual_lr).minimize(loss, global_step=global_step)
 
 
 # In[ ]:
@@ -194,17 +198,18 @@ fname_identifier = '_' + str(dataset) + '_' + hex(int(np.random.random()*1e+12))
 
 
 batch_size = 200
-init_epochs = 100000
+init_epochs = 1000000
 keep_prob = .9
 l2_reg = 1e-4
 
 al_steps = 20
-uptrain_epochs = 100000
+uptrain_epochs = 1000000
+mandatory_uptrain_epochs = 10000
 sample_each_step = 200
 T = 25
 
-early_stopping_window = .05
-max_warnings = 10
+early_stopping_window = .03
+max_warnings = 3
 early_stopping_check_step = 100
 
 gpnn_max_train = 1000
@@ -255,7 +260,7 @@ for cnt in range(init_epochs):
         print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
         data.append([epoch] + train_err + test_err)
         # checking early stopping conditions
-        if test_err[0] > prev_test_error*(1 + early_stopping_window):
+        if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
             warnings += 1
             print('*'*warnings, end = '||')
             if warnings >= max_warnings:
@@ -305,7 +310,7 @@ for al_iters in range(al_steps):
     t = time.time()
     # 1) get MCDUEs
     print('Starting AL iteration #', al_iters)
-    mcdues = get_mcdues(X_train_current)
+    mcdues = get_mcdues(X_pool_current)
     print('AL iteration #', al_iters, ': got MCDUEs')
     # 2) pick n_pick samples with top mcdues
     inds = np.argsort(mcdues)[::-1][:sample_each_step]
@@ -346,7 +351,7 @@ for al_iters in range(al_steps):
             print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
             #data.append([al_iters] + train_err + test_err)
             # checking early stopping conditions
-            if test_err[0] > prev_test_error*(1 + early_stopping_window):
+            if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
                 warnings += 1
                 print('*'*warnings, end = '||')
                 if warnings >= max_warnings:
@@ -436,7 +441,7 @@ for al_iters in range(al_steps):
             print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
             #data.append([al_iters] + train_err + test_err)
             # checking early stopping conditions
-            if test_err[0] > prev_test_error*(1 + early_stopping_window):
+            if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
                 warnings += 1
                 print('*'*warnings, end = '||')
                 if warnings >= max_warnings:
@@ -489,7 +494,7 @@ for al_iters in range(al_steps):
     t = time.time()
     # 1) get MCDUEs
     print('Starting AL iteration #', al_iters)
-    mcdues = get_mcdues(X_train_current)
+    mcdues = get_mcdues(X_pool_current)
     print('AL iteration #', al_iters, ': got MCDUEs')
     # 2) pick n_pick samples with top mcdues
     km_model = KMeans(n_clusters = sample_each_step, verbose=2)
@@ -534,7 +539,7 @@ for al_iters in range(al_steps):
             print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
             #data.append([al_iters] + train_err + test_err)
             # checking early stopping conditions
-            if test_err[0] > prev_test_error*(1 + early_stopping_window):
+            if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
                 warnings += 1
                 print('*'*warnings, end = '||')
                 if warnings >= max_warnings:
@@ -559,7 +564,7 @@ for al_iters in range(al_steps):
     lr, gs = sess.run([learning_rate, global_step])
     print('learning rate: {:.4E}, global step: {}'.format(lr, gs))
     datadf = pd.DataFrame(data, columns = data_columns).copy()
-    datadf.to_csv('csvs/data_mcdue' + fname_identifier + '.csv', index = False)
+    datadf.to_csv('csvs/data_kmmcdue' + fname_identifier + '.csv', index = False)
 #save_path = saver.save(sess, "/tmp/kmmcdue_" + fname_identifier + ".ckpt")
 #print("KMMCDUE model saved in path: %s" % save_path)
 
@@ -647,7 +652,7 @@ for al_iters in range(al_steps):
             print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
             # 0 + train_err + test_err)
             # checking early stopping conditions
-            if test_err[0] > prev_test_error*(1 + early_stopping_window):
+            if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
                 warnings += 1
                 print('*'*warnings, end = '||')
                 if warnings >= max_warnings:
@@ -768,7 +773,7 @@ for al_iters in range(5):
             #print(epoch, np.round(train_err, 4), np.round(test_err, 4), end = '|')
             #data.append([al_iters] + train_err + test_err)
             # checking early stopping conditions
-            if test_err[0] > prev_test_error*(1 + early_stopping_window):
+            if (test_err[0] > prev_test_error*(1 + early_stopping_window)) and (cnt > mandatory_uptrain_epochs):
                 warnings += 1
                 print('*'*warnings, end = '||')
                 if warnings >= max_warnings:
@@ -797,4 +802,3 @@ for al_iters in range(5):
 
 #save_path = saver.save(sess, "/tmp/2sgpnn_" + fname_identifier + ".ckpt")
 #print("2-step GPNN model saved in path: %s" % save_path)
-
