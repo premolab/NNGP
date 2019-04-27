@@ -2,6 +2,18 @@ import numpy as np
 from scipy.optimize import rosen
 from sklearn.model_selection import train_test_split
 
+def generate_func_data(func, size, d, meshgrid=False):
+    if not meshgrid:
+        X = 1 - np.random.rand(size, d) * 2
+        y = func(X)[:, None]
+        return X, y
+    else:
+        Xi, Xj = np.meshgrid(np.linspace(-1, 1), np.linspace(-1, 1))
+        X = np.vstack([Xi.ravel(), Xj.ravel()]).T
+        y = func(X)[:, None]
+        Y = y.reshape(Xi.shape)
+        return X, y, Xi, Xj, Y
+
 def generate_rosen_data(size, d, meshgrid=False):
     if not meshgrid:
         X = np.random.rand(size, d)
@@ -13,6 +25,7 @@ def generate_rosen_data(size, d, meshgrid=False):
         y = rosen(X.T)
         Y = y.reshape(Xi.shape)
         return X, y[:, None], Xi, Xj, Y
+
 
 def delete_subarr(arr, subarr):
     return np.array([i for i in arr if i not in subarr])
