@@ -37,7 +37,7 @@ class ConstDropout(nn.Dropout):
         def set_const_mask(self, new_p=None):
             self.freeze_mask = True
             new_p = new_p or self.p
-            p_inv = 1 - new_p 
+            p_inv = 1 - new_p
             self.mask = torch.distributions.Bernoulli(torch.full((self.num_features,), p_inv)).sample()/p_inv
         
         def unset_const_mask(self):
@@ -46,11 +46,11 @@ class ConstDropout(nn.Dropout):
             
             
 class ALModel(nn.Module):
-    def __init__(self, layers, p=0.05, nonlinearity=None):
+    def __init__(self, layers, p=0.05, negative_slope=0.01, nonlinearity=None):
         super(ALModel, self).__init__()
         
         if nonlinearity is None:
-            nonlinearity = nn.LeakyReLU(negative_slope=0.2)
+            nonlinearity = nn.LeakyReLU(negative_slope=negative_slope)
         
         nn_laeyrs = []
         for view_l, view_r in zip(layers, layers[1:]):
@@ -75,14 +75,16 @@ class ALModel(nn.Module):
         for m in self.net.modules():
             if isinstance(m, nn.Dropout):
                 m.unset_const_mask()
+        
     
 
-def adjust_learning_rate(optimizer, epoch, lr_dacay=0.5, lr_decay_epoch=300):
+def adjust_learning_rate(optimizer, epoch, lr_dacay=0.5,
+                         lr_decay_epoch=300, min_lr=1e-5):
     # sets the learning rate to the initial LR decayed
     if epoch / lr_decay_epoch == epoch // lr_decay_epoch: 
         state_dict = optimizer.state_dict()
         for param_group in state_dict['param_groups']:
-            param_group['lr'] = max(param_group['lr']*lr_dacay, 3e-4)
+            param_group['lr'] = max(param_group['lr']*lr_dacay, min_lr)
         optimizer.load_state_dict(state_dict)
     lr = optimizer.state_dict()['param_groups'][0]['lr']
     return lr

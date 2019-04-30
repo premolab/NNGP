@@ -89,10 +89,10 @@ def train_model(model, criterion, dataloaders, optimizer,
             ##############################################################################
             #                              ERRORS                                        #
             ##############################################################################
-            if (epoch + 1) % check_every == 0:
-                train_errors = test_model(model, dataloaders['Val'], use_gpu)
+            if ((epoch + 1) % check_every == 0):
+                train_errors = test_model(model, dataloaders['TrainPool'], use_gpu, new_p=0)
                 logs['train'] += [train_errors]
-                val_errors = test_model(model, dataloaders['Val'], use_gpu)
+                val_errors = test_model(model, dataloaders['Val'], use_gpu, new_p=0)
                 logs['val'] += [val_errors]
                 logs['epochs'] = epoch + 1
                 if train_errors[0] > current_error:
@@ -107,20 +107,20 @@ def train_model(model, criterion, dataloaders, optimizer,
     except KeyboardInterrupt:
         print('Interrupted!')
         epoch = 0
-    clear_output(True)
+#     clear_output(True)
     total_time = time() - started_at
     logs['time'] = total_time
     logs['epochs'] = epoch + 1
     print('-' * 20)
     print('Training complete in {:.0f} mins {:.0f} seconds with {} epochs'.format(total_time // 60,
-                                                                                 total_time % 60,
-                                                                                 epoch+1), flush=True)
+                                                                                  total_time % 60,
+                                                                                  epoch+1), flush=True)
     
     try:
         ##############################################################################
         #                                TEST                                        #
         ##############################################################################
-        test_errors = test_model(model, dataloaders['Test'], use_gpu)
+        test_errors = test_model(model, dataloaders['Test'], use_gpu, new_p=0)
         logs['test'] = [test_errors]
     except KeyboardInterrupt:
         print('Interrupted!')
@@ -130,19 +130,18 @@ def train_model(model, criterion, dataloaders, optimizer,
 def active_train_model(model, criterion, dataloaders, optimizer, acquisition_fun, 
                        n_al_epochs, n_train_epochs, n_val, use_gpu=torch.cuda.is_available()):
     dataloaders['TrainPool'].set_mode('pool')
-    new_point_size = len(dataloaders['TrainPool'].dataset.pool_idx) // n_al_epochs
+    new_point_size = len(dataloaders['TrainPool'].dataset.pool_idx) // (2 * n_al_epochs)
     print('Set size of new points: {}'.format(new_point_size))
     logs = {'train': list(), 'val': list()}
     train_logs = []
     started_at = time()
     train_params = {
-        'model': model,
         'criterion': criterion,
         'dataloaders': dataloaders,
         'optimizer': optimizer,
         'n_epochs': n_train_epochs,
         'check_every': 100,
-        'patience_max': 2
+        'patience_max': 3
     }
     try:
         for epoch in range(n_al_epochs):
@@ -165,15 +164,16 @@ def active_train_model(model, criterion, dataloaders, optimizer, acquisition_fun
             ##############################################################################
             dataloaders['TrainPool'].set_mode('train')
             train_params['print_const'] = print_const
-            train_model(**train_params)
+            model, train_log = train_model(model=model, **train_params)
+            train_logs.append(train_log)
             ##############################################################################
             #                               ERRORS                                       #
             ##############################################################################
             train_errors = []
             val_errors = []
             for i in range(n_val):
-                train_errors.append(test_model(model, dataloaders['Val'], use_gpu))
-                val_errors.append(test_model(model, dataloaders['Val'], use_gpu))
+                train_errors.append(test_model(model, dataloaders['TrainPool'], use_gpu, new_p=0))
+                val_errors.append(test_model(model, dataloaders['Val'], use_gpu, new_p=0))
             logs['train'] += [train_errors]
             logs['val'] += [val_errors]
             logs['epochs'] = epoch + 1
@@ -184,7 +184,7 @@ def active_train_model(model, criterion, dataloaders, optimizer, acquisition_fun
         print('Interrupted!')
         epoch = 0
     
-    clear_output(True)
+#     clear_output(True)
     total_time = time() - started_at
     print('-' * 20)
     print('Training complete in {:.0f} mins {:.0f} seconds with {} epoch'.format(total_time // 60,
@@ -195,8 +195,8 @@ def active_train_model(model, criterion, dataloaders, optimizer, acquisition_fun
         ##############################################################################
         #                                TEST                                        #
         ##############################################################################
-        test_errors = test_model(model, dataloaders['Test'], use_gpu)
+        test_errors = test_model(model, dataloaders['Test'], use_gpu, new_p=0)
         logs['test'] = [test_errors]
     except KeyboardInterrupt:
         print('Interrupted!')
-    return model, logs
+    return model, logs, train_logs
