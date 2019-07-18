@@ -76,10 +76,10 @@ class NN:
         if activation is None:
             activation = tf.nn.leaky_relu
 
-        for arg, value in locals().items():  # oh my god, what have i done
-            if arg == 'self':
-                continue
-            self.__dict__[arg] = value
+        # for arg, value in locals().items():  # oh my god, what have i done
+        #     if arg == 'self':
+        #         continue
+        #     self.__dict__[arg] = value
 
         if dropout_layers is None:
             dropout_layers = [True] * (len(layers)-1)
