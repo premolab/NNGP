@@ -68,19 +68,6 @@ class MLP:
         self.train_step = tf.train.AdamOptimizer(learning_rate=1e-4).\
                                 minimize(self.loss)
 
-        # misc part for nngp eval
-        self.KK_ = tf.placeholder(tf.float32)
-        self.Q_ = tf.placeholder(tf.float32,
-                                 [None, None])
-        self.K_train_cov_inv_ = tf.placeholder(tf.float32, [None, None])
-        self.gpue_tf = \
-            tf.linalg.tensor_diag_part(self.KK_ - \
-                                       tf.matmul(
-                                           tf.matmul(
-                                               tf.transpose(self.Q_),
-                                               self.K_train_cov_inv_),
-                                               self.Q_))
-
     def train(
         self, session, X_train, y_train, X_test, y_test, X_val, y_val,
         epochs=10000, early_stopping=True, validation_window=100,
@@ -169,4 +156,5 @@ class MLP:
                 else:
                     excerpt = slice(start_idx+batchsize, len(inputs))
                 yield inputs[excerpt], targets[excerpt]
+
 
