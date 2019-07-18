@@ -2,14 +2,21 @@ import numpy as np
 
 
 class EagerSampleSelector:
-    def update_sets(self, X_train, y_train, X_pool, y_pool, ue_values, sample_size):
-        inds = self.sample(ue_values, sample_size)
-        X_train = np.concatenate([X_train, X_pool[inds]])
-        y_train = np.concatenate([y_train, y_pool[inds]])
-        X_pool = np.delete(X_pool, inds, axis=0)
-        y_pool = np.delete(y_pool, inds, axis=0)
+    def __init__(self, oracle):
+        self.oracle = oracle
+        
+    def update_sets(self, X_train, y_train, X_pool, ue_values, sample_size):
+        # obtain new values from pool
+        indices = self.sample(ue_values, sample_size)
+        X_selected = X_pool[indices]
+        Y_selected = self.oracle.evaluate(X_pool, indices)
 
-        return X_train, y_train, X_pool, y_pool
+        # change sets
+        X_train = np.concatenate([X_train, X_selected])
+        y_train = np.concatenate([y_train, Y_selected])
+        X_pool = np.delete(X_pool, indices, axis=0)
+
+        return X_train, y_train, X_pool
 
     @staticmethod
     def sample(values, sample_size):
