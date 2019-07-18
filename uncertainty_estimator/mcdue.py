@@ -10,10 +10,9 @@ class MCDUE:
         probability_inner = probability if use_inner else 1.
         
         for nn_run in range(nn_runs):
-            mcd_realizations[:, nn_run] = \
-                np.ravel(self.net.predict(session,
-                                      data=X_pool,
-                                      probability=probability,
-                                      probabitily_inner=probability_inner))
+            prediction = self.net.predict(
+                session, data=X_pool, probability=probability, probabitily_inner=probability_inner
+            )
+            mcd_realizations[:, nn_run] = np.ravel(prediction)
             
         return np.ravel(np.std(mcd_realizations, axis=1))

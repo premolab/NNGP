@@ -138,10 +138,12 @@ class MLP:
         return epoch_num, rmse_train, rmse_test, rmse_val
 
     def predict(self, session, data, probability=1., probabitily_inner=1.):
-        return session.run(self.output,
-                           feed_dict={self.input_data: data,
-                                      self.keep_probability_inner_: probabitily_inner,
-                                      self.keep_probability_: probability})
+        feed_dict = {
+            self.input_data: data,
+            self.keep_probability_inner_: probabitily_inner,
+            self.keep_probability_: probability
+        }
+        return session.run(self.output, feed_dict=feed_dict)
 
     @staticmethod
     def iterate_minibatches(inputs, targets, batchsize, shuffle=True):
