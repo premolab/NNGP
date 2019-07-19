@@ -29,7 +29,6 @@ class NNGP:
         cov_matrix_inv = np.linalg.inv(cov_matrix_train + np.eye(train_len)*self.diag_eps)
 
         gp_ue = np.zeros((len(X_pool), ))
-
         for i in range(train_len, train_len+len(X_pool), self.batch_size):
             left = i
             right = min(i+self.batch_size, len(mcd_predictions))
@@ -47,6 +46,7 @@ class NNGP:
 
             gp_ue_currents = [0 if w < 0 else np.sqrt(w) for w in np.ravel(ws)]
             gp_ue[(left - train_len):(right - train_len)] = gp_ue_currents
+            
         return np.ravel(gp_ue)
 
     def _build_ue_computation_graph(self):

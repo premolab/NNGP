@@ -5,8 +5,11 @@ import numpy as np
 class MLP:
     def __init__(
         self, ndim, layers, initializer=None, activation=None,
-        random_state=42, dropout_layers=None
+        dropout_layers=None
     ):
+        self._build_net(layers, dropout_layers, initializer, activation, ndim)
+
+    def _build_net(self, layers, dropout_layers, initializer, activation, ndim):
         if initializer is None:
             initializer = tf.contrib.layers.xavier_initializer()
         if activation is None:
@@ -20,53 +23,48 @@ class MLP:
         self.keep_probability_inner_ = tf.placeholder(tf.float32, name='keep_probability')
         self.l2_reg_ = tf.placeholder(tf.float32, name='l2reg')
 
-        W1 = tf.get_variable(name='W0', shape=(ndim, layers[0]), initializer=initializer)
-        b1 = tf.get_variable(name='b0', shape=(layers[0],), initializer=initializer)
+        # First layer
+        W0 = tf.get_variable(name='W0', shape=(ndim, layers[0]), initializer=initializer)
+        b0 = tf.get_variable(name='b0', shape=(layers[0],), initializer=initializer)
+        h0 = activation(tf.matmul(self.input_data, W0) + b0)
+        h_drop0 = tf.nn.dropout(h0, self.keep_probability_, noise_shape=[1, layers[0]])
 
-        h1 = activation(tf.matmul(self.input_data, W1) + b1)
+        self.Ws = [W0]
+        self.bs = [b0]
+        self.hs = [h_drop0]
 
-        h_drop1 = tf.nn.dropout(h1, self.keep_probability_, noise_shape=[1, layers[0]])
+        # Inner layers
+        for i in range(1, len(layers)):
+            shape = (layers[i - 1], layers[i])
+            Wi = tf.get_variable(name=f'W{i}', shape=shape, initializer=initializer)
+            self.Ws.append(Wi)
 
-        self.Ws = [W1]
-        self.bs = [b1]
-        self.hs = [h_drop1]
+            bi = tf.get_variable(name=f'b{i}', shape=(layers[i],), initializer=initializer)
+            self.bs.append(bi)
+            
+            hi = activation(tf.matmul(self.hs[-1], Wi) + bi)
 
-        for cnt_layer in range(1, len(layers)):
-            self.Ws.append(
-                tf.get_variable(
-                    name = f'W{cnt_layer}',
-                    shape = (layers[cnt_layer - 1], layers[cnt_layer]),
-                    initializer = initializer))
-            self.bs.append(
-                tf.get_variable(
-                    name = f'b{cnt_layer}',
-                    shape = (layers[cnt_layer],),
-                    initializer = initializer))
-            h = activation(tf.matmul(self.hs[-1], self.Ws[-1]) + self.bs[-1])
-            h = tf.nn.dropout(h,
-                    self.keep_probability_ if dropout_layers[cnt_layer-1]
-                                           else self.keep_probability_inner_,
-                    noise_shape = [1, layers[cnt_layer]])
+            if dropout_layers[i-1]:
+                dropout_probability = self.keep_probability_
+            else:
+                dropout_probability = self.keep_probability_inner_
+                
+            h = tf.nn.dropout(hi, dropout_probability, noise_shape=[1, layers[i]])
             self.hs.append(h)
 
-        self.Ws.append(
-            tf.get_variable(
-                    name=f'W{len(layers)}',
-                    shape=(layers[-1], 1),
-                    initializer=initializer))
-        self.bs.append(
-            tf.get_variable(
-                    name=f'b{len(layers)}',
-                    shape=(1,),
-                    initializer=initializer))
+        # Last layer
+        Wn = tf.get_variable(name=f'W{len(layers)}', shape=(layers[-1], 1), initializer=initializer)
+        self.Ws.append(Wn)
+        bn = tf.get_variable(name=f'b{len(layers)}', shape=(1,), initializer=initializer)
+        self.bs.append(bn)
         self.output = activation(tf.matmul(self.hs[-1], self.Ws[-1]) + self.bs[-1])
 
+        # Optimization and metrics
         self.l2_regularizer = sum(tf.nn.l2_loss(Wxxx) for Wxxx in self.Ws)
-        self.mse = tf.losses.mean_squared_error(predictions = self.output,
-                                           labels = self.answer)
+        self.mse = tf.losses.mean_squared_error(predictions=self.output, labels=self.answer)
         self.loss = self.mse + self.l2_reg_*self.l2_regularizer
-        self.train_step = tf.train.AdamOptimizer(learning_rate=1e-4).\
-                                minimize(self.loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate=1e-4)
+        self.train_step = optimizer.minimize(self.loss)
 
     def train(
         self, session, X_train, y_train, X_test, y_test, X_val, y_val,
