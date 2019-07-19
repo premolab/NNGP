@@ -5,7 +5,7 @@ import numpy as np
 class MLP:
     def __init__(
         self, ndim, layers, initializer=None, activation=None,
-        dropout_layers=None
+        dropout_layers=None, random_state=42
     ):
         self._build_net(layers, dropout_layers, initializer, activation, ndim)
 
@@ -71,38 +71,24 @@ class MLP:
         epochs=10000, early_stopping=True, validation_window=100,
         patience=3, keep_prob=1., l2_reg=0, verbose=True, batch_size=500,
     ):
-
         previous_error = 1e+10
         current_patience = patience
 
         for epoch_num in range(1, 1 + epochs):
             for X_batch, y_batch in self.iterate_minibatches(X_train, y_train, batch_size):
-                session.run(self.train_step,
-                            feed_dict={self.input_data: X_batch,
-                                       self.answer: y_batch,
-                                       self.keep_probability_inner_: keep_prob,
-                                       self.keep_probability_: keep_prob,
-                                       self.l2_reg_: l2_reg})
+                feed_dict = {
+                    self.input_data: X_batch,
+                    self.answer: y_batch,
+                    self.keep_probability_inner_: keep_prob,
+                    self.keep_probability_: keep_prob,
+                    self.l2_reg_: l2_reg
+                }
+                session.run(self.train_step, feed_dict=feed_dict)
 
-            if (early_stopping) and epoch_num % validation_window == 0:
-                rmse_train = np.sqrt(
-                    session.run(self.mse,
-                             feed_dict={self.input_data: X_train,
-                                        self.answer: y_train,
-                                        self.keep_probability_inner_: 1.,
-                                        self.keep_probability_: 1.}))
-                rmse_test = np.sqrt(
-                    session.run(self.mse,
-                             feed_dict={self.input_data: X_test,
-                                        self.answer: y_test,
-                                        self.keep_probability_inner_: 1.,
-                                        self.keep_probability_: 1.}))
-                rmse_val = np.sqrt(
-                    session.run(self.mse,
-                             feed_dict={self.input_data: X_val,
-                                        self.answer: y_val,
-                                        self.keep_probability_inner_: 1.,
-                                        self.keep_probability_: 1.}))
+            if early_stopping and epoch_num % validation_window == 0:
+                rmse_train = self._rmse(session, X_train, y_train)
+                rmse_test = self._rmse(session, X_test, y_test)
+                rmse_val = self._rmse(session, X_val, y_val)
 
                 if rmse_val > previous_error:
                     current_patience -= 1
@@ -110,15 +96,10 @@ class MLP:
                     previous_error = rmse_val
                     current_patience = patience
                 if verbose:
-                    print(f'[{epoch_num}]'+\
-                          f' RMSE train:{rmse_train:.3f}'+\
-                          f' test:{rmse_test:.3f}'+\
-                          f' val:{rmse_val:.3f}'+\
-                          f' patience:{current_patience}')
+                    self._print_rmse(epoch_num, rmse_train, rmse_test, rmse_val, current_patience)
                 if current_patience <= 0:
                     if verbose:
-                        print(f'No patience left at epoch {epoch_num}.'+\
-                        ' Early stopping.')
+                        self._print_no_patience(epoch_num)
                     break
         return epoch_num, rmse_train, rmse_test, rmse_val
 
@@ -131,28 +112,42 @@ class MLP:
         return session.run(self.output, feed_dict=feed_dict)
 
     @staticmethod
-    def iterate_minibatches(inputs, targets, batchsize, shuffle=True):
-        """
-        Produces batches
-        """
+    def iterate_minibatches(inputs, targets, batch_size, shuffle=False):
         assert len(inputs) == len(targets)
+
+        indices = np.arange(len(inputs))
         if shuffle:
-            indices = np.arange(len(inputs))
             np.random.shuffle(indices)
-        if batchsize > len(inputs):
-            yield inputs[indices], targets[indices]
-        else:
-            for start_idx in range(0, len(inputs) - batchsize + 1, batchsize):
-                if shuffle:
-                    excerpt = indices[start_idx:start_idx + batchsize]
-                else:
-                    excerpt = slice(start_idx, start_idx + batchsize)
-                yield inputs[excerpt], targets[excerpt]
-            if len(inputs) % batchsize > 0:
-                if shuffle:
-                    excerpt = indices[start_idx+batchsize:len(inputs)]
-                else:
-                    excerpt = slice(start_idx+batchsize, len(inputs))
-                yield inputs[excerpt], targets[excerpt]
+
+        for left in range(0, len(inputs), batch_size):
+            right = min(left + batch_size, len(inputs))
+            batch_indices = indices[left:right]
+            yield inputs[batch_indices], targets[batch_indices]
+
+    def _rmse(self, session, X, y):
+        feed_dict = {
+            self.input_data: X,
+            self.answer: y,
+            self.keep_probability_inner_: 1.,
+            self.keep_probability_: 1.
+        }
+        return np.sqrt(session.run(self.mse, feed_dict=feed_dict))
+    
+    @staticmethod
+    def _print_rmse(epoch, rmse_train, rmse_test, rmse_val, patience):
+        print(
+            f'[{epoch}]',
+            f' RMSE train:{rmse_train:.3f}',
+            f' test:{rmse_test:.3f}',
+            f' val:{rmse_val:.3f}',
+            f' patience:{patience}'
+        )
+
+    @staticmethod
+    def _print_no_patience(epoch):
+        print(f'No patience left at epoch {epoch}. Early stopping.')
+
+
+
 
 
