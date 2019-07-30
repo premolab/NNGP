@@ -17,12 +17,15 @@ class NNGP:
 
         self.gpue_tf = self._build_ue_computation_graph()
 
-    def estimate(self, session, X_train, y_train, X_pool):
+    def set_session(self, session):
+        self.session = session
+
+    def estimate(self, X_train, y_train, X_pool):
         # data preparation
         train_pool_samples, train_len = self._generate_samples(X_train, X_pool)
 
         # monte-carlo dropout nn inference
-        mcd_predictions = self._mcd_predict(session, train_pool_samples)
+        mcd_predictions = self._mcd_predict(train_pool_samples)
 
         # covariance matrix with regularization
         cov_matrix_train = np.cov(mcd_predictions[:train_len, :], ddof=0)
@@ -42,7 +45,7 @@ class NNGP:
                  self.K_train_cov_inv_: cov_matrix_inv,
                  self.KK_: KKs
             }
-            ws = session.run(self.gpue_tf, feed_dict)
+            ws = self.session.run(self.gpue_tf, feed_dict)
 
             gp_ue_currents = [0 if w < 0 else np.sqrt(w) for w in np.ravel(ws)]
             gp_ue[(left - train_len):(right - train_len)] = gp_ue_currents
@@ -67,18 +70,18 @@ class NNGP:
 
         return train_pool_samples, train_len
 
-    def _mcd_predict(self, session, train_pool_samples):
+    def _mcd_predict(self, train_pool_samples):
         mcd_predictions = np.zeros((train_pool_samples.shape[0], self.nn_runs))
         for nn_run in range(self.nn_runs):
-            prediction = self._net_predict(session, train_pool_samples)
+            prediction = self._net_predict(train_pool_samples)
             mcd_predictions[:, nn_run] = np.ravel(prediction)
         return mcd_predictions
 
-    def _net_predict(self, session, train_pool_samples):
+    def _net_predict(self, train_pool_samples):
         probability_inner = self.probability if self.use_inner else 1.
         
         return self.net.predict(
-            session, data=train_pool_samples, probability=self.probability,
+            data=train_pool_samples, probability=self.probability,
             probabitily_inner=probability_inner
         )
     

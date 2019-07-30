@@ -9,6 +9,9 @@ class MLP:
     ):
         self._build_net(layers, dropout_layers, initializer, activation, ndim)
 
+    def set_session(self, session):
+        self.session = session
+
     def _build_net(self, layers, dropout_layers, initializer, activation, ndim):
         if initializer is None:
             initializer = tf.contrib.layers.xavier_initializer()
@@ -67,7 +70,7 @@ class MLP:
         self.train_step = optimizer.minimize(self.loss)
 
     def train(
-        self, session, X_train, y_train, X_test, y_test, X_val, y_val,
+        self, X_train, y_train, X_test, y_test, X_val, y_val,
         epochs=10000, early_stopping=True, validation_window=100,
         patience=3, keep_prob=1., l2_reg=0, verbose=True, batch_size=500,
     ):
@@ -83,12 +86,12 @@ class MLP:
                     self.keep_probability_: keep_prob,
                     self.l2_reg_: l2_reg
                 }
-                session.run(self.train_step, feed_dict=feed_dict)
+                self.session.run(self.train_step, feed_dict=feed_dict)
 
             if early_stopping and epoch_num % validation_window == 0:
-                rmse_train = self._rmse(session, X_train, y_train)
-                rmse_test = self._rmse(session, X_test, y_test)
-                rmse_val = self._rmse(session, X_val, y_val)
+                rmse_train = self._rmse(X_train, y_train)
+                rmse_test = self._rmse(X_test, y_test)
+                rmse_val = self._rmse(X_val, y_val)
 
                 if rmse_val > previous_error:
                     current_patience -= 1
@@ -103,13 +106,13 @@ class MLP:
                     break
         return epoch_num, rmse_train, rmse_test, rmse_val
 
-    def predict(self, session, data, probability=1., probabitily_inner=1.):
+    def predict(self, data, probability=1., probabitily_inner=1.):
         feed_dict = {
             self.input_data: data,
             self.keep_probability_inner_: probabitily_inner,
             self.keep_probability_: probability
         }
-        return session.run(self.output, feed_dict=feed_dict)
+        return self.session.run(self.output, feed_dict=feed_dict)
 
     @staticmethod
     def iterate_minibatches(inputs, targets, batch_size, shuffle=False):
@@ -124,14 +127,14 @@ class MLP:
             batch_indices = indices[left:right]
             yield inputs[batch_indices], targets[batch_indices]
 
-    def _rmse(self, session, X, y):
+    def _rmse(self, X, y):
         feed_dict = {
             self.input_data: X,
             self.answer: y,
             self.keep_probability_inner_: 1.,
             self.keep_probability_: 1.
         }
-        return np.sqrt(session.run(self.mse, feed_dict=feed_dict))
+        return np.sqrt(self.session.run(self.mse, feed_dict=feed_dict))
     
     @staticmethod
     def _print_rmse(epoch, rmse_train, rmse_test, rmse_val, patience):
