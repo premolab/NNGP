@@ -6,7 +6,7 @@ import numpy as np
 
 
 class RosenData:
-    def __init__(self, n_train, n_val, n_test, n_pool, n_dim, cache_dir='data/rosen'):
+    def __init__(self, n_train, n_val, n_test, n_pool, n_dim, cache_dir='dataloader/data/rosen'):
         self.n_train = n_train
         self.n_val = n_val
         self.n_test = n_test
