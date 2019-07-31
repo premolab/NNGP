@@ -6,13 +6,16 @@ import numpy as np
 
 
 class RosenData:
-    def __init__(self, n_train, n_val, n_test, n_pool, n_dim, cache_dir='dataloader/data/rosen'):
+    def __init__(
+            self, n_train, n_val, n_test, n_pool, n_dim,
+            cache_dir='dataloader/data/rosen', rewrite=False):
         self.n_train = n_train
         self.n_val = n_val
         self.n_test = n_test
         self.n_pool = n_pool
         self.n_dim = n_dim
         self.cache_dir = cache_dir
+        self.rewrite = rewrite
 
     def dataset(self, use_cache=False):
         if use_cache:
@@ -51,8 +54,9 @@ class RosenData:
         x_shape = (getattr(self, 'n_'+label), self.n_dim)
         X = np.random.random(x_shape)
         y = self._rosen(X)
-        self._save('x_'+label, X)
-        self._save('y_'+label, y)
+        if self.rewrite:
+            self._save('x_'+label, X)
+            self._save('y_'+label, y)
         return X, y
 
     def _save(self, name, dataset):

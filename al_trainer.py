@@ -25,7 +25,7 @@ class ALTrainer:
 
         for al_iteration in range(1, self.iterations + 1):
             # update pool
-            uncertainties = self.estimator.estimate(X_train, y_train, X_pool)
+            uncertainties = self.estimator.estimate(X_pool, X_train, y_train)
             print('Uncertainties', uncertainties[:20])
             print('Uncertainties', uncertainties[uncertainties.argsort()[-10:][::-1]])
             X_train, y_train, X_pool = self.sampler.update_sets(

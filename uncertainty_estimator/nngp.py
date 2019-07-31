@@ -20,7 +20,7 @@ class NNGP:
     def set_session(self, session):
         self.session = session
 
-    def estimate(self, X_train, y_train, X_pool):
+    def estimate(self, X_pool, X_train, y_train):
         # data preparation
         train_pool_samples, train_len = self._generate_samples(X_train, X_pool)
 
