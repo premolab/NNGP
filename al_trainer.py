@@ -31,11 +31,11 @@ class ALTrainer:
             X_train, y_train, X_pool = self.sampler.update_sets(
                 X_train, y_train, X_pool, uncertainties, self.update_size
             )
+            print("Iteration", al_iteration)
 
             # retrain net
             self.model.train(X_train, y_train, X_test, y_test, X_test, y_test)
             rmse = np.sqrt(mse(self.model.predict(data=X_test), y_test))
-            print("Iteration", al_iteration, "RMSE", rmse)
             rmses.append(rmse)
 
         return rmses

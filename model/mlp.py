@@ -14,7 +14,8 @@ class MLP:
 
     def _build_net(self, layers, dropout_layers, initializer, activation, ndim):
         if initializer is None:
-            initializer = tf.contrib.layers.xavier_initializer()
+            # initializer = tf.contrib.layers.xavier_initializer()
+            initializer = tf.keras.initializers.glorot_normal()
         if activation is None:
             activation = tf.nn.leaky_relu
         if dropout_layers is None:
