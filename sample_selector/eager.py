@@ -2,6 +2,10 @@ import numpy as np
 
 
 class EagerSampleSelector:
+    """
+    Move samples from pool dataset to train dataset
+    Takes samples with highest uncertainty first
+    """
     def __init__(self, oracle):
         self.oracle = oracle
         

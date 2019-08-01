@@ -2,6 +2,9 @@ import numpy as np
 
 
 class MCDUE:
+    """
+    Estimate uncertainty for samples with MCDUE approach
+    """
     def __init__(self, net, nn_runs=25, probability=.5, use_inner=False):
         self.net = net
         self.nn_runs = nn_runs

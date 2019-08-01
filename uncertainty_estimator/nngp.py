@@ -3,6 +3,9 @@ import numpy as np
 
 
 class NNGP:
+    """
+    Estimate uncertainty for samples with MCDUE approach
+    """
     def __init__(
         self, net, random_subsampling=-1, nn_runs=25, diag_eps=1e-6,
         inference_batch_size=1000, probability=.5, use_inner=False

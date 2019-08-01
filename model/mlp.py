@@ -3,6 +3,10 @@ import numpy as np
 
 
 class MLP:
+    """
+    Simple fully-connected network
+    It can make dropout on inference (that's helps with MCDUE and NNGP)
+    """
     def __init__(
             self, ndim, layers, initializer=None, activation=None,
             dropout_layers=None):

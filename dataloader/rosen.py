@@ -6,6 +6,10 @@ import numpy as np
 
 
 class RosenData:
+    """
+    Generate points for n_dim Rosenbrock function
+    Or loads the points from cached version
+    """
     def __init__(
             self, n_train, n_val, n_test, n_pool, n_dim,
             cache_dir='dataloader/data/rosen', rewrite=False):
