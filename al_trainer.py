@@ -19,23 +19,26 @@ class ALTrainer:
         self.verbose = verbose
 
     def train(self, X_train, y_train, X_val, y_val, X_pool):
-        self.model.train(X_train, y_train, X_val, y_val)
+        self.model.train(X_train, y_train, X_val, y_val, verbose=self.verbose)
 
         rmses = [self._rmse(X_val, y_val)]
 
         for al_iteration in range(1, self.iterations + 1):
             # update pool
             uncertainties = self.estimator.estimate(X_pool, X_train, y_train)
-            print('Uncertainties', uncertainties[:20])
-            print('Top uncertainties', uncertainties[uncertainties.argsort()[-10:][::-1]])
             X_train, y_train, X_pool = self.sampler.update_sets(
                 X_train, y_train, X_pool, uncertainties, self.update_size
             )
+            if self.verbose:
+                print('Uncertainties', uncertainties[:20])
+                print('Top uncertainties', uncertainties[uncertainties.argsort()[-10:][::-1]])
             print("Iteration", al_iteration)
 
             # retrain net
-            self.model.train(X_train, y_train, X_val, y_val)
-            rmses.append(self._rmse(X_val, y_val))
+            self.model.train(X_train, y_train, X_val, y_val, verbose=self.verbose)
+            rmse = self._rmse(X_val, y_val)
+            print('Validation RMSE after training: %.3f' % rmse)
+            rmses.append(rmse)
 
         return rmses
 
