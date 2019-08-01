@@ -4,9 +4,9 @@ import numpy as np
 
 class MLP:
     def __init__(
-        self, ndim, layers, initializer=None, activation=None,
-        dropout_layers=None, random_state=42
-    ):
+            self, ndim, layers, initializer=None, activation=None,
+            dropout_layers=None):
+
         self._build_net(layers, dropout_layers, initializer, activation, ndim)
 
     def set_session(self, session):
@@ -14,7 +14,6 @@ class MLP:
 
     def _build_net(self, layers, dropout_layers, initializer, activation, ndim):
         if initializer is None:
-            # initializer = tf.contrib.layers.xavier_initializer()
             initializer = tf.keras.initializers.glorot_normal()
         if activation is None:
             activation = tf.nn.leaky_relu
