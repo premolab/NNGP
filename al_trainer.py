@@ -18,10 +18,10 @@ class ALTrainer:
         self.update_size = update_size
         self.verbose = verbose
 
-    def train(self, X_train, y_train, X_val, y_val, X_test, y_test, X_pool):
-        self.model.train(X_train, y_train, X_test, y_test, X_test, y_test)
+    def train(self, X_train, y_train, X_val, y_val, X_pool):
+        self.model.train(X_train, y_train, X_val, y_val)
 
-        rmses = [np.sqrt(mse(self.model.predict(data=X_test), y_test))]
+        rmses = [self._rmse(X_val, y_val)]
 
         for al_iteration in range(1, self.iterations + 1):
             # update pool
@@ -34,11 +34,13 @@ class ALTrainer:
             print("Iteration", al_iteration)
 
             # retrain net
-            self.model.train(X_train, y_train, X_test, y_test, X_test, y_test)
-            rmse = np.sqrt(mse(self.model.predict(data=X_test), y_test))
-            rmses.append(rmse)
+            self.model.train(X_train, y_train, X_val, y_val)
+            rmses.append(self._rmse(X_val, y_val))
 
         return rmses
+
+    def _rmse(self, X, y):
+        return np.sqrt(mse(self.model.predict(data=X), y))
 
 
 

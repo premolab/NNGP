@@ -70,7 +70,7 @@ class MLP:
         self.train_step = optimizer.minimize(self.loss)
 
     def train(
-        self, X_train, y_train, X_test, y_test, X_val, y_val,
+        self, X_train, y_train, X_val, y_val,
         epochs=10000, early_stopping=True, validation_window=100,
         patience=3, keep_prob=1., l2_reg=0, verbose=True, batch_size=500,
     ):
@@ -90,7 +90,6 @@ class MLP:
 
             if early_stopping and epoch_num % validation_window == 0:
                 rmse_train = self._rmse(X_train, y_train)
-                rmse_test = self._rmse(X_test, y_test)
                 rmse_val = self._rmse(X_val, y_val)
 
                 if rmse_val > previous_error:
@@ -99,12 +98,12 @@ class MLP:
                     previous_error = rmse_val
                     current_patience = patience
                 if verbose:
-                    self._print_rmse(epoch_num, rmse_train, rmse_test, rmse_val, current_patience)
+                    self._print_rmse(epoch_num, rmse_train, rmse_val, current_patience)
                 if current_patience <= 0:
                     if verbose:
                         self._print_no_patience(epoch_num)
                     break
-        return epoch_num, rmse_train, rmse_test, rmse_val
+        return epoch_num, rmse_train, rmse_val
 
     def predict(self, data, probability=1., probabitily_inner=1.):
         feed_dict = {
@@ -137,11 +136,10 @@ class MLP:
         return np.sqrt(self.session.run(self.mse, feed_dict=feed_dict))
     
     @staticmethod
-    def _print_rmse(epoch, rmse_train, rmse_test, rmse_val, patience):
+    def _print_rmse(epoch, rmse_train, rmse_val, patience):
         print(
             f'[{epoch}]',
             f' RMSE train:{rmse_train:.3f}',
-            f' test:{rmse_test:.3f}',
             f' val:{rmse_val:.3f}',
             f' patience:{patience}'
         )
