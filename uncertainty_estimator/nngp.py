@@ -17,9 +17,6 @@ class NNGP:
 
         self.gpue_tf = self._build_ue_computation_graph()
 
-    def set_session(self, session):
-        self.session = session
-
     def estimate(self, X_pool, X_train, y_train):
         # data preparation
         train_pool_samples, train_len = self._generate_samples(X_train, X_pool)
@@ -45,7 +42,8 @@ class NNGP:
                  self.K_train_cov_inv_: cov_matrix_inv,
                  self.KK_: KKs
             }
-            ws = self.session.run(self.gpue_tf, feed_dict)
+            with tf.Session() as sess:
+                ws = sess.run(self.gpue_tf, feed_dict)
 
             gp_ue_currents = [0 if w < 0 else np.sqrt(w) for w in np.ravel(ws)]
             gp_ue[(left - train_len):(right - train_len)] = gp_ue_currents
