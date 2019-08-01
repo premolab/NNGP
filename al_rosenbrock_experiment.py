@@ -39,24 +39,9 @@ def run_experiment(config):
             config['n_train'], config['n_val'], config['n_test'], config['n_pool'], config['n_dim']
         ).dataset(use_cache=config['use_cache'])
 
-        # Init neural network & tf session
-        tf.reset_default_graph()
-        if config['random_seed'] is not None:
-            # Setting seeds for reproducibility
-            tf.set_random_seed(config['random_seed'])
-            np.random.seed(config['random_seed'])
-            random.seed(config['random_seed'])
+        # Build neural net and set random seed
+        model, sess = build_tf_model(sess, config['n_dim'], config['layers'], config['random_seed'])
 
-        model = MLP(ndim=config['n_dim'], layers=config['layers'])
-
-        if sess is not None and not sess._closed:
-            sess.close()
-        init = tf.global_variables_initializer()
-        sess = tf.Session()
-        sess.run(init)
-        model.set_session(sess)
-
-        # Init other parts
         estimator = build_estimator(estimator_name, model)  # to estimate uncertainties
         oracle = IdentityOracle(y_pool)  # generate y for X from pool
         sampler = EagerSampleSelector(oracle)  # sample X and y from pool by uncertainty estimations
@@ -68,6 +53,26 @@ def run_experiment(config):
         rmses[estimator_name] = trainer.train(X_train, y_train, X_val, y_val, X_pool)
 
     visualize(rmses)
+
+
+def build_tf_model(sess, n_dim, layers, random_seed):
+    tf.reset_default_graph()
+    if random_seed is not None:
+        # Setting seeds for reproducibility
+        tf.set_random_seed(random_seed)
+        np.random.seed(random_seed)
+        random.seed(random_seed)
+
+    model = MLP(ndim=n_dim, layers=layers)
+
+    if sess is not None and not sess._closed:
+        sess.close()
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    sess.run(init)
+    model.set_session(sess)
+
+    return model, sess
 
 
 def build_estimator(name, model):
